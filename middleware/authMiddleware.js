@@ -5,17 +5,18 @@ import User from '../models/userModel.js'
 const protect = asyncHandler(async (req, res, next) => {
   let token
 
-  if (
-    req.headers.authorization &&
-    req.headers.authorization.startsWith('Bearer')
-  ) {
+  // Check if token exists in cookies (instead of the Authorization header)
+  if (req.cookies.jwt) {
     try {
-      token = req.headers.authorization.split(' ')[1]
+      token = req.cookies.jwt // Get token from cookies
 
+      // Verify the token
       const decoded = jwt.verify(token, process.env.JWT_SECRET)
 
+      // Fetch user based on decoded token ID (excluding password field)
       req.user = await User.findById(decoded.id).select('-password')
 
+      // Proceed to next middleware/handler
       next()
     } catch (error) {
       console.error(error)
@@ -31,8 +32,9 @@ const protect = asyncHandler(async (req, res, next) => {
 })
 
 const admin = (req, res, next) => {
+  // Check if the user is an admin
   if (req.user && req.user.isAdmin) {
-    next()
+    next() // User is admin, proceed
   } else {
     res.status(401)
     throw new Error('Not authorized as an admin')
